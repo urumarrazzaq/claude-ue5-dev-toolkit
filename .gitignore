@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Claude Code - personal, machine-local overrides
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Editors / OS
+.vscode/
+.idea/
+.vs/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Unreal Engine (in case the toolkit is copied into a UE project)
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
