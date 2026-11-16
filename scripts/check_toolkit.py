@@ -36,10 +36,13 @@ REQUIRED_FILES = [
     ".claude/skills/ue5-ai-systems/SKILL.md", ".claude/skills/ue5-build-debugging/SKILL.md",
     ".claude/skills/ue5-multiplayer/SKILL.md", ".claude/skills/ue5-code-review/SKILL.md",
     ".claude/agents/ue5-architect.md", ".claude/agents/ue5-cpp-developer.md",
-    ".claude/agents/ue5-code-reviewer.md",
-    "scripts/validate_project.py", "scripts/README.md",
-    "tests/test_safety_guard.py",
+    ".claude/agents/ue5-code-reviewer.md", ".claude/agents/ue5-build-engineer.md",
+    ".claude/agents/ue5-blueprint-specialist.md", ".claude/skills/ue5-orchestrator/SKILL.md",
+    "scripts/validate_project.py", "scripts/orchestrator.py", "scripts/README.md",
+    "tests/test_safety_guard.py", "tests/test_orchestrator.py",
     "docs/installation.md", "docs/architecture.md", "docs/usage-examples.md",
+    "docs/multi-agent-architecture.md", "docs/parallel-workflows.md",
+    "docs/context-management.md", "docs/example-development-session.md",
 ]
 
 HOOK_EVENTS = {

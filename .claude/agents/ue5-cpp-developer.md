@@ -60,6 +60,22 @@ already in the codebase.
 - Blueprint/editor steps, regenerate project files, restart editor (reflection changes), etc.
 ```
 
+## Orchestrated mode
+
+When the prompt comes from the `ue5-orchestrator` coordinator (it contains a
+`# Task <id>` brief):
+
+- Modify **only** the files listed under "Files you own". If the task needs a
+  change in another file (for example `Build.cs`), stop and report it in
+  `issues` - another agent may be editing that file right now.
+- Read the listed context files and upstream handoffs instead of re-exploring
+  the project.
+- Do not build: other agents may be editing in parallel, and compilation is
+  scheduled separately (`ue5-build-engineer`). Report "Not compiled".
+- Do not run any git command except read-only `git status` / `git diff`.
+- End with the JSON handoff block from the brief, `status: "review"`, listing
+  every file you actually changed.
+
 ## Restrictions
 
 - Never overwrite or revert the user's uncommitted changes; never run

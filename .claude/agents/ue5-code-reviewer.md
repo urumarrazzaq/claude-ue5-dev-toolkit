@@ -56,6 +56,17 @@ What changed and overall risk (low / medium / high).
 - Items needing compilation, PIE/multiplayer testing or in-editor checks.
 ```
 
+## Orchestrated mode
+
+When the prompt comes from the `ue5-orchestrator` coordinator (it contains a
+`# Task <id>` brief), review exactly the files and upstream handoffs listed in
+the brief (and `git diff` of those files). Also check each upstream task's
+`validation` requirements and whether any change falls outside the files that
+task owned. End with the JSON handoff block including `verdict`:
+`approve`, `approve_with_comments` (no blocking issues) or
+`changes_requested` (at least one BLOCKER/MAJOR finding). Put each finding in
+`issues` as `"[SEVERITY] path:line - problem"`.
+
 ## Restrictions
 
 - Read-only: never edit or create files, never stage, commit, reset or

@@ -43,6 +43,7 @@ UE team expects:
 - [Usage examples](#usage-examples)
 - [Hook behaviour](#hook-behaviour)
 - [Skills and subagents](#skills-and-subagents)
+- [Multi-agent orchestration](#multi-agent-orchestration)
 - [Project validator](#project-validator)
 - [Testing](#testing)
 - [Configuration](#configuration)
@@ -56,7 +57,8 @@ UE team expects:
 |---|---|---|
 | `ue5_safety_guard.py` hook | Inspects every `Bash` / `PowerShell` command; **denies** history-destroying git commands and recursive deletion of the project, protected UE folders, home or drive roots; **asks** for risky-but-legitimate operations | Implemented, 48 tests |
 | Skills | `ue5-cpp`, `ue5-blueprints`, `ue5-ai-systems`, `ue5-build-debugging`, `ue5-multiplayer`, `ue5-code-review` | Implemented, frontmatter validated |
-| Subagents | `ue5-architect`, `ue5-cpp-developer`, `ue5-code-reviewer` | Implemented, frontmatter validated |
+| Subagents | `ue5-architect`, `ue5-cpp-developer`, `ue5-blueprint-specialist`, `ue5-build-engineer`, `ue5-code-reviewer` | Implemented, frontmatter validated |
+| Multi-agent orchestrator | `ue5-orchestrator` coordinator skill + `orchestrator.py` task board: dependency ordering, file-ownership locks, parallel batches, user-change protection, mandatory review, git audit, handoffs, final report | Implemented, 50 tests + runnable demo |
 | `CLAUDE.md` | Project rules: inspect first, verify APIs, respect UObject lifecycle and authority, never overwrite user work, report validation | Implemented |
 | `settings.json` | Hook registration, read-only git allow-list, `Edit` denied on `.uasset`/`.umap` and generated folders | Implemented, structure validated |
 | `validate_project.py` | Read-only UE project report: `.uproject` metadata, modules vs `Build.cs`, targets, plugins, config, content counts, VCS hygiene; text or JSON | Implemented, 10 tests |
@@ -69,6 +71,9 @@ CLAUDE.md (always loaded)
    │
 Claude Code session ──► skills (loaded on demand) ──► ue5-cpp, ue5-multiplayer, ...
    │                └─► subagents ──► architect (read-only) → developer → reviewer (read-only)
+   │
+   ├── /ue5-orchestrator ──► coordinator (main session) ──► orchestrator.py task board
+   │        └─► Agent tool batches ──► architect │ cpp-developer ×N │ blueprint │ reviewer │ build
    │
    └── every Bash/PowerShell call ──► PreToolUse hook ──► deny | ask | (no output: normal permissions)
 ```
@@ -100,23 +105,35 @@ claude-ue5-dev-toolkit/
 │   │   ├── ue5-ai-systems/SKILL.md
 │   │   ├── ue5-build-debugging/SKILL.md
 │   │   ├── ue5-multiplayer/SKILL.md
-│   │   └── ue5-code-review/SKILL.md
+│   │   ├── ue5-code-review/SKILL.md
+│   │   └── ue5-orchestrator/SKILL.md  # multi-agent coordinator workflow
 │   └── agents/
 │       ├── ue5-architect.md
 │       ├── ue5-cpp-developer.md
+│       ├── ue5-blueprint-specialist.md
+│       ├── ue5-build-engineer.md
 │       └── ue5-code-reviewer.md
 ├── scripts/
 │   ├── validate_project.py          # UE project validator (read-only)
+│   ├── orchestrator.py              # multi-agent task board and safety checks
 │   ├── check_toolkit.py             # toolkit self-check
 │   └── README.md
+├── examples/orchestration/
+│   ├── combat-ability.tasks.json    # example architect plan
+│   └── demo_session.py              # runnable end-to-end demo (simulated agents)
 ├── tests/
 │   ├── test_safety_guard.py
 │   ├── test_validate_project.py
+│   ├── test_orchestrator.py
 │   └── test_check_toolkit.py
 └── docs/
     ├── installation.md
     ├── architecture.md
-    └── usage-examples.md
+    ├── usage-examples.md
+    ├── multi-agent-architecture.md
+    ├── parallel-workflows.md
+    ├── context-management.md
+    └── example-development-session.md
 ```
 
 ## Installation
@@ -223,7 +240,61 @@ Malformed input never crashes it. Full rule list and protocol:
 |---|---|---|
 | `ue5-architect` | Maps architecture, modules and dependencies; produces an implementation plan with file:line evidence | Read, Grep, Glob, Bash (read-only use) |
 | `ue5-cpp-developer` | Implements C++ with minimal diffs, updates Build.cs, builds if a command is known, reports honestly | Read, Grep, Glob, Edit, Write, Bash |
+| `ue5-blueprint-specialist` | Finds Blueprint/asset dependencies from text evidence, writes exact editor steps; uses an editor MCP integration only if configured and allowed | Read, Grep, Glob, Bash (read-only use) |
+| `ue5-build-engineer` | Analyses UBT/UHT/linker logs, module/plugin dependency problems; builds only when asked; proposes safe Build.cs/.uproject fixes | Read, Grep, Glob, Bash |
 | `ue5-code-reviewer` | Reviews the diff for GC, replication, performance, architecture and regression issues | Read, Grep, Glob, Bash (read-only use) |
+
+## Multi-agent orchestration
+
+For features that span several classes, the `ue5-orchestrator` skill turns
+the main Claude Code session into a **coordinator** that delegates to the
+subagents above through Claude Code's Agent tool, with a JSON task board
+(`scripts/orchestrator.py`) that keeps the work safe:
+
+```
+request → architect plan → validated tasks → conflict-free batches (parallel Agent calls
+in one message) → handoffs → code review (mandatory) → build (if asked) → report
+```
+
+| Safeguard | Enforced by |
+|---|---|
+| Two agents never own/modify the same file at the same time | plan validation (overlapping owners must be ordered) + run-time file locks |
+| Dependencies respected, cycles rejected | `validate`, `ready`, `start` |
+| User's uncommitted changes never overwritten silently | `preflight` git baseline; affected tasks wait for explicit user approval |
+| Changes outside a task's ownership detected | handoff check + `audit` (git status vs ownership) |
+| No build while code is being edited | scheduler |
+| Nothing finalised without review | code tasks complete only after an approving review newer than their last change |
+| No automatic merging, no git mutations by agents | skill rules, agent prompts, safety hook |
+
+Usage in a UE project (after installation):
+
+```
+/ue5-orchestrator Implement a dash ability that damages enemies it passes; compile when done
+```
+
+Task board commands (the coordinator runs these; you can too):
+
+```bash
+python scripts/orchestrator.py init --title "Dash Strike" --request "..."
+python scripts/orchestrator.py preflight --project-dir .
+python scripts/orchestrator.py import-tasks .claude/orchestration/tasks.json
+python scripts/orchestrator.py ready
+python scripts/orchestrator.py brief T1
+python scripts/orchestrator.py status
+python scripts/orchestrator.py report
+```
+
+Try the full workflow without Unreal or Claude (agent outputs simulated,
+task-board output real):
+
+```bash
+python examples/orchestration/demo_session.py
+```
+
+Docs: [architecture](docs/multi-agent-architecture.md) ·
+[parallel workflows](docs/parallel-workflows.md) ·
+[context management](docs/context-management.md) ·
+[example session](docs/example-development-session.md).
 
 ## Project validator
 
@@ -247,11 +318,11 @@ python -m unittest discover -s tests -v     # Windows: py -3 -m unittest discove
 python scripts/check_toolkit.py
 ```
 
-Results at the time of writing (Windows 11, Python 3.15.0 and 3.13.17):
+Results at the time of writing (Windows 11, Python 3.15.0; orchestrator suite added 2026-11-16):
 
 ```
-Ran 61 tests ... OK
-Toolkit check PASSED: 67 checks passed, 0 failed (6 skills validated).
+Ran 111 tests ... OK
+Toolkit check PASSED: 88 checks passed, 0 failed (7 skills validated).
 ```
 
 The code avoids syntax newer than Python 3.8, but only 3.13 and 3.15 have
@@ -261,6 +332,7 @@ been run locally; the CI workflow tests 3.10 and 3.13 on Ubuntu and Windows.
 |---|---|---|
 | `test_safety_guard.py` | 48 | every example in `docs/usage-examples.md`, allowed commands (git status/log/diff, Python, regenerable folders, quoted text), blocked git, blocked deletion (POSIX, PowerShell, cmd, nested shells, find), ask cases, the real script via subprocess (stdout JSON shape, exit codes, invalid/empty/non-object JSON, fail-closed mode), tokenizer |
 | `test_validate_project.py` | 10 | healthy project, BOM-encoded `.uproject`, missing module/targets, invalid JSON, no project, `.gitignore` gaps, plugin module without Build.cs, JSON output, read-only guarantee |
+| `test_orchestrator.py` | 50 | dependency validation (unknown, self, cycles, transitive), agent assignment (unknown agent, writer/read-only ownership rules, registry vs agent `tools`), duplicate/overlapping file ownership, conflicting-task scheduling (locks, build exclusivity, parallel limit, failed prerequisites, dirty user files), every status transition rule and review gate, invalid definitions, handoffs, audit, briefs, report, CLI, real `git status` parsing, end-to-end demo |
 | `test_check_toolkit.py` | 3 | repository passes its own self-check; frontmatter parser |
 
 `pytest tests` also works if you have pytest installed, but it is not required.
@@ -310,6 +382,14 @@ been run locally; the CI workflow tests 3.10 and 3.13 on Ubuntu and Windows.
   guarantee that generated UE code compiles; always build and test.
   Read-only agents are restricted by tool list and instructions; their Bash
   access is not sandboxed.
+- **Orchestration ownership is detected, not prevented.** Claude Code cannot
+  restrict a subagent's `Edit` tool to a file list. The orchestrator never
+  schedules overlapping tasks together and audits `git status` against
+  ownership after each batch, but a misbehaving agent can still edit an
+  unowned file before it is caught. Audits need a git repository. The
+  coordinator is the model following a skill; the CLI refuses unsafe
+  transitions but cannot force the coordinator to call it. Live multi-agent
+  runs are not covered by automated tests (the demo simulates agent output).
 - **The validator** checks structure, not code. It cannot verify engine or
   marketplace plugins without the engine installation, and it does not parse
   `Build.cs` C#.

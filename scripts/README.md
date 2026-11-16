@@ -76,6 +76,32 @@ Findings
 Result: 0 error(s), 2 warning(s), 0 info
 ```
 
+## `orchestrator.py` - multi-agent task board
+
+Keeps the plan used by the `ue5-orchestrator` coordinator skill. It does not
+run agents; it validates plans and refuses unsafe operations. It writes only
+the plan file (default `.claude/orchestration/plan.json`, atomic replace) and
+runs only read-only `git status`.
+
+| Command | Purpose |
+|---|---|
+| `init --title T [--request R]` | Create an empty plan (refuses to overwrite without `--force`) |
+| `import-tasks FILE` / `add ...` | Append tasks; the plan is saved only if it validates |
+| `validate [--json]` | Schema, agents (and agent `tools` vs registry), dependencies, cycles, file-ownership conflicts, status consistency |
+| `preflight --project-dir DIR` | Record files with uncommitted user changes as the baseline |
+| `ready [--max N] [--json]` | Next batch that can start together, with reasons for every waiting task |
+| `brief ID` | Focused prompt for the task's subagent, with JSON handoff template |
+| `start ID...` | Mark tasks in progress; all-or-nothing safety checks |
+| `set-status ID STATUS [--note]` | Validated transition (`blocked`/`failed` need a note) |
+| `handoff ID --json-file F` | Record an agent's structured handoff; flags files outside ownership |
+| `allow-dirty ID --note` | After the user agrees, let a task edit files they changed |
+| `decide TEXT` | Record a decision injected into later briefs |
+| `audit --project-dir DIR` | Compare `git status` with ownership since the baseline |
+| `status` / `report [--output F]` | Task table / final Markdown report |
+
+Exit codes: `0` success, `1` invalid plan or refused operation, `2` I/O error.
+End-to-end demo: `python examples/orchestration/demo_session.py`.
+
 ## `check_toolkit.py` - toolkit self-check
 
 Validates this repository (or a project the toolkit was copied into):

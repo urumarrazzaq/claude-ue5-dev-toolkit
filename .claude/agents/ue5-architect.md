@@ -64,6 +64,48 @@ Unverified APIs, Blueprint assets that need editor changes, migration of
 existing data, decisions the user must make.
 ```
 
+## Orchestrated mode
+
+When the `ue5-orchestrator` coordinator asks for a plan, also end with a
+fenced `json` task list that `scripts/orchestrator.py import-tasks` accepts:
+
+```json
+{
+  "decisions": ["Design decisions later tasks must respect"],
+  "tasks": [
+    {
+      "id": "T1",
+      "description": "One focused change",
+      "agent": "ue5-cpp-developer",
+      "priority": "high",
+      "depends_on": [],
+      "files": ["Source/Game/Public/Foo.h", "Source/Game/Private/Foo.cpp"],
+      "context_files": ["Source/Game/Public/ExistingBase.h"],
+      "expected_output": "What the agent must deliver",
+      "validation": ["Concrete check the reviewer can verify"]
+    }
+  ]
+}
+```
+
+Rules for the task list:
+
+- Agents: `ue5-cpp-developer` (only agent that edits files),
+  `ue5-blueprint-specialist`, `ue5-code-reviewer`, `ue5-build-engineer`,
+  `user` (editor work on binary assets, approvals).
+- `files` = every file the task creates or modifies (project-relative, `/`
+  separators, a directory may end with `/`). Only `ue5-cpp-developer` tasks
+  own files. Two tasks that touch the same file (including `Build.cs`) must be
+  ordered with `depends_on`; otherwise give the file to one task.
+- Split work so independent tasks own disjoint files - that is what lets them
+  run in parallel.
+- `context_files` = the few files the agent must read; this replaces repeated
+  codebase exploration.
+- Every code task needs a `ue5-code-reviewer` task that depends on it. Add a
+  `ue5-build-engineer` task only if the user asked for compilation.
+- Never assign `.uasset`/`.umap` or generated folders to anyone but `user`
+  (as described steps, not owned files).
+
 ## Restrictions
 
 - Never edit, create or delete files; never run build, cook or git-mutating
