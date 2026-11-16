@@ -1,0 +1,125 @@
+{
+  "decisions": [
+    "Implement the ability on the existing Gameplay Ability System setup (UShooterAbilitySystemComponent), not as a new component.",
+    "Server-authoritative: the ability runs LocalPredicted; damage is applied only on the server through a GameplayEffect."
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "description": "Create UGA_DashStrike (UShooterGameplayAbility subclass): LocalPredicted dash forward using a root-motion task, server-side sphere sweep at the end of the dash, apply DamageEffectClass to each hit actor once, commit cost and cooldown.",
+      "agent": "ue5-cpp-developer",
+      "priority": "high",
+      "depends_on": [],
+      "files": [
+        "Source/ShooterGame/Public/Abilities/GA_DashStrike.h",
+        "Source/ShooterGame/Private/Abilities/GA_DashStrike.cpp"
+      ],
+      "context_files": [
+        "Source/ShooterGame/Public/Abilities/ShooterGameplayAbility.h",
+        "Source/ShooterGame/Private/Abilities/GA_Sprint.cpp"
+      ],
+      "expected_output": "Ability header/source following GA_Sprint conventions; handoff lists every engine API used and whether it was verified.",
+      "validation": [
+        "Damage is applied only when HasAuthority()",
+        "No UObject raw pointer members without UPROPERTY",
+        "Cooldown and cost committed via CommitAbility"
+      ]
+    },
+    {
+      "id": "T2",
+      "description": "Create UDashStrikeDamageExecution (UGameplayEffectExecutionCalculation) that scales base damage by the source's AttackPower attribute and the target's Armor attribute from UShooterAttributeSet.",
+      "agent": "ue5-cpp-developer",
+      "priority": "high",
+      "depends_on": [],
+      "files": [
+        "Source/ShooterGame/Public/Abilities/DashStrikeDamageExecution.h",
+        "Source/ShooterGame/Private/Abilities/DashStrikeDamageExecution.cpp"
+      ],
+      "context_files": [
+        "Source/ShooterGame/Public/Abilities/ShooterAttributeSet.h"
+      ],
+      "expected_output": "Execution calculation class with captured attribute definitions; formula documented in the header.",
+      "validation": [
+        "Uses existing AttackPower/Armor attributes; no new attributes",
+        "Damage clamped to >= 0"
+      ]
+    },
+    {
+      "id": "T3",
+      "description": "Grant GA_DashStrike in AShooterCharacter's default abilities and bind it to the existing ability input tag mapping (InputTag.Ability.Secondary).",
+      "agent": "ue5-cpp-developer",
+      "priority": "medium",
+      "depends_on": ["T1"],
+      "files": [
+        "Source/ShooterGame/Public/Character/ShooterCharacter.h",
+        "Source/ShooterGame/Private/Character/ShooterCharacter.cpp"
+      ],
+      "context_files": [
+        "Source/ShooterGame/Private/Abilities/ShooterAbilitySystemComponent.cpp"
+      ],
+      "expected_output": "Ability granted on the server only (in PossessedBy), input tag routed through the existing ASC input path.",
+      "validation": [
+        "GiveAbility is called only with authority",
+        "No duplicate grant on re-possession"
+      ]
+    },
+    {
+      "id": "T4",
+      "description": "Specify the editor work: GE_DashStrike_Damage (uses UDashStrikeDamageExecution), GE_DashStrike_Cooldown, the dash AnimMontage notify, and the InputAction/IMC entry.",
+      "agent": "ue5-blueprint-specialist",
+      "priority": "medium",
+      "depends_on": ["T1", "T2"],
+      "context_files": [
+        "Config/DefaultGameplayTags.ini",
+        "Source/ShooterGame/Public/Abilities/GA_DashStrike.h"
+      ],
+      "expected_output": "Step-by-step editor instructions with asset paths, parent classes and property values; list of gameplay tags needed.",
+      "validation": [
+        "Every asset referenced by T1/T2 code has a creation step",
+        "No instruction requires editing .uasset files outside the editor"
+      ]
+    },
+    {
+      "id": "T5",
+      "description": "Review T1-T3: replication/authority, prediction keys, GC safety of captured pointers, cooldown/cost, convention match.",
+      "agent": "ue5-code-reviewer",
+      "priority": "high",
+      "depends_on": ["T1", "T2", "T3"],
+      "context_files": [
+        "Source/ShooterGame/Public/Abilities/GA_DashStrike.h",
+        "Source/ShooterGame/Private/Abilities/GA_DashStrike.cpp",
+        "Source/ShooterGame/Public/Abilities/DashStrikeDamageExecution.h",
+        "Source/ShooterGame/Private/Abilities/DashStrikeDamageExecution.cpp",
+        "Source/ShooterGame/Private/Character/ShooterCharacter.cpp"
+      ],
+      "expected_output": "Structured review report with severity, file:line evidence and a verdict.",
+      "validation": [
+        "Verdict recorded with the handoff",
+        "Every blocking finding has file:line evidence"
+      ]
+    },
+    {
+      "id": "T6",
+      "description": "Compile ShooterGameEditor Win64 Development and analyse any UBT/compiler errors.",
+      "agent": "ue5-build-engineer",
+      "priority": "medium",
+      "depends_on": ["T1", "T2", "T3"],
+      "expected_output": "Exact build command, exit code, and root-cause analysis of the first error (or 'build succeeded').",
+      "validation": [
+        "Build command and result quoted verbatim",
+        "Only runs when the user requested compilation"
+      ]
+    },
+    {
+      "id": "T7",
+      "description": "Create the assets described by T4 in the Unreal Editor and play-test with two clients (Net Mode: Play as Client).",
+      "agent": "user",
+      "priority": "low",
+      "depends_on": ["T1", "T2", "T3", "T4", "T6"],
+      "expected_output": "User confirms the assets exist and the dash damages remote targets once.",
+      "validation": [
+        "PIE with 2 clients: damage appears on both clients, applied once"
+      ]
+    }
+  ]
+}

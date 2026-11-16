@@ -59,11 +59,17 @@ the **Project facts** section.
 ## Toolkit components
 
 - Skills (`.claude/skills/`): `ue5-cpp`, `ue5-blueprints`, `ue5-ai-systems`,
-  `ue5-build-debugging`, `ue5-multiplayer`, `ue5-code-review`. Load the one
-  that matches the task.
+  `ue5-build-debugging`, `ue5-multiplayer`, `ue5-code-review`,
+  `ue5-orchestrator`. Load the one that matches the task.
 - Subagents (`.claude/agents/`): `ue5-architect` (read-only planning),
-  `ue5-cpp-developer` (implementation), `ue5-code-reviewer` (read-only review).
+  `ue5-cpp-developer` (implementation), `ue5-code-reviewer` (read-only review),
+  `ue5-blueprint-specialist` (read-only asset/editor instructions),
+  `ue5-build-engineer` (build logs and validation; read-only).
   For non-trivial features: architect → developer → reviewer.
+- Multi-agent orchestration: for features spanning several classes, follow
+  the `ue5-orchestrator` skill. Track tasks with `scripts/orchestrator.py`;
+  never start tasks it refuses, never let two agents edit the same file at
+  once, and never finalise code without an approving review.
 - Safety hook (`.claude/hooks/ue5_safety_guard.py`): blocks destructive git and
   deletion commands. If it denies a command, do not try to work around it -
   explain the situation to the user.

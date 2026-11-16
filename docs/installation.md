@@ -102,10 +102,28 @@ app settings → App execution aliases* and make sure a real `python3` is on
 
 3. **Inside Claude Code:**
    - Run `/hooks` (CLI) to see the `PreToolUse` hook listed.
-   - Run `/agents` to see `ue5-architect`, `ue5-cpp-developer` and `ue5-code-reviewer`.
-   - Ask: *"What skills are available?"* - the six `ue5-*` skills should be listed.
+   - Run `/agents` to see `ue5-architect`, `ue5-cpp-developer`, `ue5-blueprint-specialist`,
+     `ue5-build-engineer` and `ue5-code-reviewer`.
+   - Ask: *"What skills are available?"* - the seven `ue5-*` skills should be listed
+     (including `ue5-orchestrator`, also invocable as `/ue5-orchestrator <task>`).
    - Ask Claude to run `git reset --hard`; it should report that the UE5 safety
      guard blocked the command.
+
+## Multi-agent orchestrator
+
+`orchestrator.py` is copied with the other scripts. The coordinator skill
+looks for it at `scripts/orchestrator.py` or `Tools/claude/orchestrator.py`.
+It stores session state in `.claude/orchestration/` in your project; add that
+folder to your project's `.gitignore` unless you want to commit plans and
+reports. Ownership audits use `git status`, so the project should be a git
+repository. Check the setup with:
+
+```bash
+python3 Tools/claude/orchestrator.py --plan .claude/orchestration/plan.json init --title smoke-test
+python3 Tools/claude/orchestrator.py --plan .claude/orchestration/plan.json validate
+```
+
+See [multi-agent-architecture.md](multi-agent-architecture.md).
 
 ## Configuration
 
@@ -127,6 +145,7 @@ an `env` block to `.claude/settings.json` or `.claude/settings.local.json`:
 ## Uninstall
 
 Delete `.claude/hooks/ue5_safety_guard.py`, the `ue5-*` folders under
-`.claude/skills/`, the three `ue5-*.md` files under `.claude/agents/`, the
+`.claude/skills/`, the five `ue5-*.md` files under `.claude/agents/`, the
+`.claude/orchestration/` folder (orchestrator plans and reports), the
 `PreToolUse` entry in `.claude/settings.json`, and the toolkit section of
 `CLAUDE.md`.

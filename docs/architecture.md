@@ -70,6 +70,12 @@ Typical flow for a feature: **architect** (map + plan) → user approves →
 **developer** (implement, build) → **reviewer** (independent review of the
 diff) → main session reports to the user.
 
+Two more read-only agents support larger work: `ue5-blueprint-specialist`
+(asset dependencies and editor instructions) and `ue5-build-engineer`
+(UBT/UHT log analysis and build validation). For multi-class features the
+`ue5-orchestrator` skill coordinates all five with a validated task board;
+see [multi-agent-architecture.md](multi-agent-architecture.md).
+
 ### 4. Safety hook - `.claude/hooks/ue5_safety_guard.py`
 
 A `PreToolUse` command hook matched to `Bash|PowerShell`.
@@ -111,6 +117,9 @@ Design decisions:
 - `check_toolkit.py` validates the toolkit's own files (JSON, Python syntax,
   settings shape, skill/agent frontmatter, required layout). It also runs as
   part of the unit-test suite.
+- `orchestrator.py` is the multi-agent task board: plan validation,
+  scheduling, status transitions, handoffs, git audit and reports. It writes
+  only its plan file and runs only read-only `git status`.
 
 ## What is intentionally not included
 
