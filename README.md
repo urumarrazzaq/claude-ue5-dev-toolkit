@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Claude UE5 Dev Toolkit: safety hooks, domain skills and subagents for Claude Code in Unreal Engine 5 projects" width="100%">
+</p>
+
 # claude-ue5-dev-toolkit
 
 **Claude Code toolkit for Unreal Engine development featuring custom safety
@@ -82,6 +86,9 @@ claude-ue5-dev-toolkit/
 ├── CLAUDE.md                        # project instructions (copy to your UE project root)
 ├── .gitignore
 ├── .github/workflows/tests.yml      # CI: tests + self-check on Ubuntu and Windows
+├── assets/
+│   ├── banner.svg                   # README / social-preview banner (source)
+│   └── banner.png                   # rendered 1280x640
 ├── .claude/
 │   ├── settings.json                # hook registration + permission rules
 │   ├── hooks/
